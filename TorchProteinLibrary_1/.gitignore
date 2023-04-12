@@ -1,0 +1,52 @@
+#Temp files
+*~
+*.png
+*.pdb
+*.xplor
+*.tex
+*.svg
+*.code-workspace
+*.egg-info
+*.pkl
+*.js
+*.bib
+*.pdf
+*.sty
+*.gif
+*.txt
+
+#Python 
+*.pyc
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app

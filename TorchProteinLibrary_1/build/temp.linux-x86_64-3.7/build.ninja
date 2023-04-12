@@ -1,0 +1,33 @@
+ninja_required_version = 1.3
+cxx = c++
+nvcc = /usr/local/cuda/bin/nvcc
+
+cflags = -pthread -B /opt/conda/envs/GeoMol/compiler_compat -Wl,--sysroot=/ -Wsign-compare -DNDEBUG -g -fwrapv -O3 -Wall -Wstrict-prototypes -fPIC -ILayers/ReducedModel -IMath -I/opt/conda/envs/GeoMol/lib/python3.7/site-packages/torch/include -I/opt/conda/envs/GeoMol/lib/python3.7/site-packages/torch/include/torch/csrc/api/include -I/opt/conda/envs/GeoMol/lib/python3.7/site-packages/torch/include/TH -I/opt/conda/envs/GeoMol/lib/python3.7/site-packages/torch/include/THC -I/usr/local/cuda/include -I/opt/conda/envs/GeoMol/include/python3.7m -c
+post_cflags = -fopenmp -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_ReducedModel -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++14
+cuda_cflags = -ILayers/ReducedModel -IMath -I/opt/conda/envs/GeoMol/lib/python3.7/site-packages/torch/include -I/opt/conda/envs/GeoMol/lib/python3.7/site-packages/torch/include/torch/csrc/api/include -I/opt/conda/envs/GeoMol/lib/python3.7/site-packages/torch/include/TH -I/opt/conda/envs/GeoMol/lib/python3.7/site-packages/torch/include/THC -I/usr/local/cuda/include -I/opt/conda/envs/GeoMol/include/python3.7m -c
+cuda_post_cflags = -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''"'"'-fPIC'"'"'' -Xcompiler -fopenmp -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_ReducedModel -D_GLIBCXX_USE_CXX11_ABI=0 -gencode=arch=compute_75,code=sm_75 -std=c++14
+ldflags = 
+
+rule compile
+  command = $cxx -MMD -MF $out.d $cflags -c $in -o $out $post_cflags
+  depfile = $out.d
+  deps = gcc
+
+rule cuda_compile
+  command = $nvcc $cuda_cflags -c $in -o $out $cuda_post_cflags
+
+
+
+build /workspace/Molecule3D/TorchProteinLibrary_1/build/temp.linux-x86_64-3.7/Math/cMatrix33.o: compile /workspace/Molecule3D/TorchProteinLibrary_1/Math/cMatrix33.cpp
+build /workspace/Molecule3D/TorchProteinLibrary_1/build/temp.linux-x86_64-3.7/Math/cMatrix44.o: compile /workspace/Molecule3D/TorchProteinLibrary_1/Math/cMatrix44.cpp
+build /workspace/Molecule3D/TorchProteinLibrary_1/build/temp.linux-x86_64-3.7/Math/cVector3.o: compile /workspace/Molecule3D/TorchProteinLibrary_1/Math/cVector3.cpp
+build /workspace/Molecule3D/TorchProteinLibrary_1/build/temp.linux-x86_64-3.7/Math/nUtil.o: compile /workspace/Molecule3D/TorchProteinLibrary_1/Math/nUtil.cpp
+build /workspace/Molecule3D/TorchProteinLibrary_1/build/temp.linux-x86_64-3.7/Layers/ReducedModel/cBackboneProteinCPUKernels.o: compile /workspace/Molecule3D/TorchProteinLibrary_1/Layers/ReducedModel/cBackboneProteinCPUKernels.cpp
+build /workspace/Molecule3D/TorchProteinLibrary_1/build/temp.linux-x86_64-3.7/Layers/ReducedModel/Angles2Backbone/angles2backbone_interface.o: compile /workspace/Molecule3D/TorchProteinLibrary_1/Layers/ReducedModel/Angles2Backbone/angles2backbone_interface.cpp
+build /workspace/Molecule3D/TorchProteinLibrary_1/build/temp.linux-x86_64-3.7/Layers/ReducedModel/cBackboneProteinCUDAKernels.o: cuda_compile /workspace/Molecule3D/TorchProteinLibrary_1/Layers/ReducedModel/cBackboneProteinCUDAKernels.cu
+build /workspace/Molecule3D/TorchProteinLibrary_1/build/temp.linux-x86_64-3.7/Layers/ReducedModel/main.o: compile /workspace/Molecule3D/TorchProteinLibrary_1/Layers/ReducedModel/main.cpp
+
+
+
+
+
