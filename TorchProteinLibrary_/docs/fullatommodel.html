@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+  <head>
+	<!-- Required meta tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" 
+	integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+	<script type="text/x-mathjax-config">
+		MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+	</script>
+	<script type="text/javascript"
+		src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+	</script>
+	<script src="js/scripts.js"></script>
+	<link rel="stylesheet" href="css/default.css">
+	<script src="js/highlight.pack.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+
+	<link rel="stylesheet" href="https://cdn.rawgit.com/afeld/bootstrap-toc/v1.0.0/dist/bootstrap-toc.min.css">
+	<script src="https://cdn.rawgit.com/afeld/bootstrap-toc/v1.0.0/dist/bootstrap-toc.min.js"></script>
+	
+	<title>TorchProteinLibrary documentation</title>
+
+
+  </head>
+  
+  <body data-spy="scroll" data-target="#toc">
+		<object data="Examples/FullAtomModel/ExampleAngles2Coords.py" id = "ExampleAngles2Coords.py" onloadeddata="copyFileContents();" type="text/plain" style="display:none">
+		</object>
+		<object data="Examples/FullAtomModel/ExamplePDB2CoordsUnordered.py" id = "ExamplePDB2CoordsUnordered.py" type="text/plain" style="display:none" ></object>
+	<header>
+	<div class="collapse bg-dark" id="navbarHeader">
+		<div class="container">
+		<div class="row">
+			<div class="col-sm-8 col-md-7 py-4">
+			<h4 class="text-white">About</h4>
+			<p class="text-muted">This library was created by Georgy Derevyanko (Concordia University) under the supervision of 
+				Guillaume Lamoureux (Concordia University) and Yoshua Bengio (MILA, University of Montreal).</p>
+			</div>
+		</div>
+		</div>
+	</div>
+
+	<div class="navbar navbar-dark bg-dark shadow-sm">
+		<div class="container d-flex justify-content-between">
+		<a href="index.html" class="navbar-brand d-flex align-items-center">
+		<strong>TorchProteinLibrary v0.15 Documentation</strong>
+		</a>
+		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarHeader" aria-controls="navbarHeader" aria-expanded="false" aria-label="Toggle navigation">
+		<span class="navbar-toggler-icon"></span>
+		</button>
+		</div>
+	</div>
+	</header>
+	
+	<div class="row">
+	<div class="col-sm-2">
+		<nav id="toc" data-toggle="toc" class="sticky-top">
+			<ul class="nav navbar-nav">
+				<li><a class="nav-link active" href="#"><b>FullAtomModel</b></a></li>
+				<ul class="nav navbar-nav">
+					<li><a class="nav-link active" href="#Angles2Coords">Angles2Coords</a></li>
+					<li><a class="nav-link active" href="#Coords2TypedCoords">Coords2TypedCoords</a></li>
+					<li><a class="nav-link active" href="#PDB2CoordsUnordered">PDB2CoordsUnordered</a></li>
+					<li><a class="nav-link active" href="#CoordsTranslate">CoordsTranslate</a></li>
+					<li><a class="nav-link active" href="#CoordsRotate">CoordsRotate</a></li>
+					<li><a class="nav-link active" href="#Coords2Center">Coords2Center</a></li>
+					<li><a class="nav-link active" href="#getBBox">getBBox</a></li>
+					<li><a class="nav-link active" href="#getRandomTranslation">getRandomTranslation</a></li>
+					<li><a class="nav-link active" href="#getRandomRotation">getRandomRotation</a></li>
+				</ul>
+				<li><a class="nav-link active" href="rmsd.html"><b>RMSD</b></a></li>
+				<li><a class="nav-link active" href="reducedmodel.html"><b>ReducedModel</b></a></li>
+				<li><a class="nav-link active" href="volume.html"><b>Volume</b></a></li>
+				<li><a class="nav-link active" href="examples.html"><b>Examples</b></a></li>
+			</ul>
+		</nav>
+	</div>
+	
+	<main role="main">
+
+	<section class="jumbotron text-center">
+		<div class="container">
+		<h1 class="jumbotron-heading">FullAtomModel</h1>
+		<p class="lead text-muted">This module contains layers to convert angles to coordinates, load PDB files, assign atom types
+			and transform coordinates of a protein.</p>
+		</div>
+	</section>
+	
+	<div class="container" id="Angles2Coords">
+		<script>createHeader("Angles2Coords", "class", "FullAtomModel", "Angles2Coords");</script>
+		<div class="container">
+			This layer converts amino acid sequences and dihedral angles to atomic coordinates:
+			
+			<pre class="pre-scrollable"><code class="python">
+from TorchProteinLibrary import FullAtomModel
+a2c = FullAtomModel.Angles2Coords()
+sequences = ["AAA"]
+angles = torch.randn(1, 8, 3, dtype=torch.double)
+coords, res_names, atom_names, num_atoms = a2c(angles, sequences)
+			</code></pre>
+			
+			Each amino acid is described by a list of 8 dihedral angles $\{\phi, \psi, \omega, \chi_1, \chi_2, \chi_3, \chi_4, \chi_5\}$ (in that order).
+			The angles not needed for a given amino acid are ignored but a list of 8 elements should be provided for all amino acids.
+			<br><br>
+			
+			<h3>Implementation</h3>
+			
+			The layer computes the coordinates by building a graph of transforms, acting on rigid groups of atoms.
+			For example, the following figure shows a schematic representation of threonine, 
+			which has 5 rigid groups in total and is parametrized by 4 transforms. 
+			
+			<img src="Fig/Amino-acid.png" class="rounded mx-auto d-block float-center" alt="Representation of threonine" width=40%>
+			
+			Each transform is represented by a dihedral angle $\alpha$ and has the form 
+			$$ R_i(\alpha) = R(\alpha, \beta_i, d_i) = R_y (\beta_i) T_x(d_i) R_x(\alpha) $$
+			where $R_x(\alpha)$ and $R_y(\beta_i)$ are the 4x4 rotation matrices around axes $x$ and $y$,
+			and $T_x(d_i)$ is the 4x4 translation matrix along axis $x$.
+			$\beta_i$ and $d_i$ are fixed parameters for which we do not compute derivatives.
+			For instance, the first transform of the threonine parametrization shown above can be written as
+			$$ R_1(\phi) = R(\phi, \theta_1, d_1)$$
+			where $\phi$ is the first dihedral angle (variable), $\theta_1$ is the X-N-CA angle (fixed), and $d_1$ is the N-CA bond length (fixed).
+			Atom names are encoded in ASCII following the standard PDB nomenclature, with the last symbol 
+			always set to '\0'.
+			<br><br>
+			
+			To compute the coordinates of a rigid group of atoms, we need to multiply each coordinate in an initial reference frame by the
+			appropriate matrix. During the forward pass we construct a graph of cumulative transformations: 
+
+			<img src="Fig/MolecularGraph.png" class="rounded mx-auto d-block float-center" alt="Transformation graph for threonine" width=30%>
+
+			$$\begin{eqnarray}
+			M_1 &=& R_1(\phi)\\
+			M_2 &=& R_1(\phi) R_2(\chi)\\
+			M_3 &=& R_1(\phi) R_3(\psi)\\
+			M_4 &=& R_1(\phi) R_3(\psi) R_4(\omega)
+			\end{eqnarray}$$
+			In short, to get the cumulative transform of a node $M_{i}$, we take the cumulative transform 
+			$M_{parent(i)}$ and multiply it by the transform of the current node $R_{i}$. The atomic coordinates are
+			obtained by multiplying the reference coordinates of each rigid group by its cumulative transform. <br><br>
+
+			To compute the gradient of a function $L$ that depends on the coordinates of the model, let's consider the simple situation
+			depicted here:
+			<br><br>
+			
+			<img src="Fig/example_graph.png" class="rounded mx-auto d-block float-center" alt="Simple transformation graph example" width=40%>
+			
+			Since the graph has three nodes, $L$ depends on three positions.
+			The derivative with respect to the first dihedral angle is:
+			$$
+			\frac{\partial L(\mathbf{r}_{1}, \mathbf{r}_{2}, \mathbf{r}_{3})}{\partial \phi_0} = 
+			\frac{\partial L}{\partial \mathbf{r_1}}\cdot \frac{\partial \mathbf{r_1}}{\partial \phi_0} + 
+			\frac{\partial L}{\partial \mathbf{r_2}}\cdot \frac{\partial \mathbf{r_2}}{\partial \phi_0} + 
+			\frac{\partial L}{\partial \mathbf{r_3}}\cdot \frac{\partial \mathbf{r_3}}{\partial \phi_0}
+			$$
+			The first term of that sum can be written as:
+			$$
+			\frac{\partial L}{\partial \mathbf{r_1}}\cdot \frac{\partial \mathbf{r_1}}{\partial \phi_0} = 
+			\frac{\partial L}{\partial \mathbf{r_1}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} \mathbf{r}^0_1
+			$$
+			where $\mathbf{r}^0_1$ is the vector of atom 1 in the initial reference frame.
+			The other two terms can be written as:
+			$$
+			\frac{\partial L}{\partial \mathbf{r_2}}\cdot \frac{\partial \mathbf{r_2}}{\partial \phi_0} = 
+			\frac{\partial L}{\partial \mathbf{r_2}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} R_1 \mathbf{r}^0_2
+			$$
+			$$
+			\frac{\partial L}{\partial \mathbf{r_3}}\cdot \frac{\partial \mathbf{r_3}}{\partial \phi_0} = 
+			\frac{\partial L}{\partial \mathbf{r_3}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} R_2 \mathbf{r}^0_3
+			$$
+			We can write those expressions using $\mathbf{r}_k$, the transformed atomic coordinates calculated during the forward pass:
+			$$
+			\frac{\partial L}{\partial \mathbf{r_1}}\cdot \frac{\partial \mathbf{r_1}}{\partial \phi_0} = 
+			\frac{\partial L}{\partial \mathbf{r_1}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} M_1^{-1} M_1  \mathbf{r}^0_1 =
+			\frac{\partial L}{\partial \mathbf{r_1}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} M^{-1}_1 \mathbf{r}_1
+			$$
+			$$
+			\frac{\partial L}{\partial \mathbf{r_2}}\cdot \frac{\partial \mathbf{r_2}}{\partial \phi_0} = 
+			\frac{\partial L}{\partial \mathbf{r_2}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} M_1^{-1} M_1 R_1 \mathbf{r}^0_2 = 
+			\frac{\partial L}{\partial \mathbf{r_2}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} M_1^{-1} M_2 \mathbf{r}^0_2 =
+			\frac{\partial L}{\partial \mathbf{r_2}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} M_1^{-1} \mathbf{r}_2
+			$$
+			$$
+			\frac{\partial L}{\partial \mathbf{r_3}}\cdot \frac{\partial \mathbf{r_3}}{\partial \phi_0} = 
+			\frac{\partial L}{\partial \mathbf{r_3}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} M^{-1}_1 \mathbf{r}_3
+			$$
+			Now, let's return back to the sum:
+			$$
+			\frac{\partial L(\mathbf{r}_{1}, \mathbf{r}_{2}, \mathbf{r}_{3})}{\partial \phi_0} =  
+			\sum^3_{k=1} \frac{\partial L}{\partial \mathbf{r_k}}\cdot M_0 \frac{\partial R_0}{\partial \phi_0} M^{-1}_1 \mathbf{r}_k
+			$$
+			In this formula index $k$ iterates over the children of node 0. This expression can be generalized to any 
+			graph without loops. Matrices $ F_i = M_i \frac{\partial R_i}{\partial \phi_i} M^{-1}_{i+1}$ are computed during the forward pass.
+			The final expression for the derivative is:
+			$$
+			\frac{\partial L}{\partial \phi_i} =
+			\frac{\partial L}{\partial \mathbf{r_k}}\cdot F_i \sum_{k \in children(i)} \mathbf{r}_k
+			$$
+			These sums can be easily computed during backward deph-first propagation through the graph.
+			<br><br>
+			
+			<h3>Input/Output</h3>
+			
+			The input and output tensors have the following structure:<br><br>
+			<img src="Fig/Tensors.png" class="rounded mx-auto d-block float-center" alt="Figure 4: Structure of input and output tensors" width=80%>
+			<br><br>
+		</div>
+		
+	</div>
+	<script>
+		generate_table("Angles2Coords", 
+						[
+							["Angles", "CPU", "float/double", "[batch_size, 8, number of amino acids]"], 
+							["Sequences", "CPU", "list of strings", "length = batch_size"]
+						],
+						[
+							["Coordinates", "CPU", "float/double", "[batch_size, 3 x number of atoms]"],
+							["ResidueNames", "CPU", "byte", "[batch_size, number of amino acids, 4]"],
+							["AtomNames", "CPU", "byte", "[batch_size, number of amino acids, 4]"],
+							["NumAtoms", "CPU", "int", "[batch_size]"],
+						]
+						);
+	</script>
+	<div class="container">
+		<p class="text-light bg-dark"><h3>Example</h3></p>
+			<pre class="pre-scrollable" id="Emb1">
+				<code class="python" id="ExampleAngles2Coords">
+import torch
+from TorchProteinLibrary import FullAtomModel
+import numpy as np
+import matplotlib.pylab as plt
+import mpl_toolkits.mplot3d.axes3d as p3
+
+
+if __name__=='__main__':
+	a2c = FullAtomModel.Angles2Coords()
+	sequences = ['GGMLGWAHFGY']
+	
+	#Setting conformation to alpha-helix
+	angles = torch.zeros(len(sequences), 8, len(sequences[-1]), dtype=torch.double, device='cpu')
+	angles.data[:,0,:] = -1.047
+	angles.data[:,1,:] = -0.698
+	angles.data[:,3,:] = np.pi
+	angles.data[:,3:,:] = 110.4*np.pi/180.0
+
+	#Converting angles to coordinates
+	coords, res_names, atom_names, num_atoms = a2c(angles, sequences)
+	
+	#Making a mask on CA, C, N atoms
+	is0C = torch.eq(atom_names[:,:,0], 67).squeeze()
+	is1A = torch.eq(atom_names[:,:,1], 65).squeeze()
+	is20 = torch.eq(atom_names[:,:,2], 0).squeeze()
+	is0N = torch.eq(atom_names[:,:,0], 78).squeeze()
+	is10 = torch.eq(atom_names[:,:,1], 0).squeeze()
+	isCA = is0C*is1A*is20
+	isC = is0C*is10
+	isN = is0N*is10
+	isSelected = torch.ge(isCA + isC + isN, 1)
+
+	#Resizing coordinates array for convenience (to match selection mask)
+	N = int(num_atoms[0].item())
+	coords.resize_(1, N, 3)
+	
+	backbone_x = torch.masked_select(coords[0,:,0], isSelected)
+	backbone_y = torch.masked_select(coords[0,:,1], isSelected)
+	backbone_z = torch.masked_select(coords[0,:,2], isSelected)
+
+	#Plotting all atoms with the red dots and backbone with the blue line
+	sx, sy, sz = coords[0,:,0].numpy(), coords[0,:,1].numpy(), coords[0,:,2].numpy()
+	bx, by, bz = backbone_x.numpy(), backbone_y.numpy(), backbone_z.numpy()
+	
+	fig = plt.figure()
+	plt.title("Full atom model")
+	ax = p3.Axes3D(fig)
+	ax.plot(sx,sy,sz, 'r.', label = 'atoms')
+	ax.plot(bx,by,bz, 'b-', label = 'backbone')
+	ax.legend()
+	plt.show()
+	plt.savefig("ExampleAngles2Coords.png")
+			</code></pre>
+		<div class="codebox">
+			<script src = "Examples/FullAtomModel/ExampleAngles2Coords.py" type="text/x-python"></script>
+		</div>
+		<img src="Examples/FullAtomModel/ExampleAngles2Coords.png" class="rounded mx-auto d-block float-center" alt="..." width=60%>
+	</div>
+	
+	<div class="container" id = "Coords2TypedCoords">
+		<script>createHeader("Coords2TypedCoords", "class", "FullAtomModel", "Coords2TypedCoords" );</script>
+		<div class="container">
+			This layer assigns atom types and rearranges coordinates according to types.
+			Currently we use 11 atom types defined as following:
+			<table class="table">
+				<thead>
+				  <tr>
+					<th scope="col">Type</th>
+					<th scope="col">Description</th>
+					<th scope="col">Atoms</th>
+				  </tr>
+				</thead>
+				<tbody>
+				  <tr>
+					<th scope="row">1</th>
+					<td>Sulfur/selenium</td>
+					<td>CYS:SG, MET:SD, MSE:SE</td>
+				  </tr>
+				  <tr>
+					<th scope="row">2</th>
+					<td>Nitrogen (amide)</td>
+					<td>ASN:ND2, GLN:NE2, backbone N (including N-terminal)</td>
+				  </tr>
+				  <tr>
+					<th scope="row">3</th>
+					<td>Nitrogen (aromatic)</td>
+					<td>HIS:ND1/NE1, TRP:NE1</td>
+				  </tr>
+				  <tr>
+					<th scope="row">4</th>
+					<td>Nitrogen (guanidinium)</td>
+					<td>ARG:NE/NH*</td>
+				  </tr>
+				  <tr>
+					<th scope="row">5</th>
+					<td>Nitrogen (ammonium)</td>
+					<td>LYS:NZ</td>
+				  </tr>
+				  <tr>
+					<th scope="row">6</th>
+					<td>Oxygen (carbonyl)</td>
+					<td>ASN:OD1, GLN:OE1, backbone O (except C-terminal)</td>
+				  </tr>
+				  <tr>
+					<th scope="row">7</th>
+					<td>Oxygen (hydroxyl)</td>
+					<td>SER:OG, THR:OG1, TYR:OH</td>
+				  </tr>
+				  <tr>
+					<th scope="row">8</th>
+					<td>Oxygen (carboxyl)</td>
+					<td>ASP:OD*, GLU:OE*, C-terminal O, C-terminal OXT</td>
+				  </tr>
+				  <tr>
+					<th scope="row">9</th>
+					<td>Carbon (sp2)</td>
+					<td>ARG:CZ, ASN:CG, ASP:CG, GLN:CD, GLU:CD, backbone C</td>
+				  </tr>
+				  <tr>
+					<th scope="row">10</th>
+					<td>Carbon (aromatic)</td>
+					<td>HIS:CG/CD2/CE1, PHE:CG/CD*/CE*/CZ, TRP:CG/CD*/CE*/CZ*/CH2, TYR:CG/CD*/CE*/CZ </td>
+				  </tr>
+				  <tr>
+					<th scope="row">11</th>
+					<td>Carbon (sp3)</td>
+					<td>ALA:CB, ARG:CB/CG/CD, ASN:CB, ASP:CB, CYS:CB, GLN:CB/CG, GLU:CB/CG, HIS:CB, ILE:CB/CG*/CD1, 
+						LEU:CB/CG/CD*, LYS:CB/CG/CD/CE, MET:CB/CG/CE, MSE:CB/CG/CE, PHE:CB, PRO:CB/CG/CD, SER:CB, THR:CB/CG2, 
+						TRP:CB, TYR:CB, VAL:CB/CG*, backbone CA</td>
+				  </tr>
+				</tbody>
+			</table>
+			Output coordinates are arranged such that atoms of one type are grouped together in a contiguous stretch of memory.
+			NumAtomsOfType stores the number of atoms of particular type and offsets are the number of atoms in the memory, before 
+			particular atom type stretch of coordinates begins. For example, we get the coordinates of the first atom of type 8 in sample $i$ using:
+			$$ r = \mathrm{Coordinates}[i, 3(\mathrm{Offsets}[8] + 0)] $$
+
+			<h3>Input/Output</h3>
+		</div>
+	</div>
+	<script>
+		generate_table("Coords2TypedCoords", 
+						[
+							["Coordinates", "CPU", "float/double", "[batch_size, 3 x number of atoms]"],
+							["ResidueNames", "CPU", "byte", "[batch_size, number of amino acids, 4]"],
+							["AtomNames", "CPU", "byte", "[batch_size, number of amino acids, 4]"],
+							["NumAtoms", "CPU", "int", "[batch_size]"]
+						],
+						[
+							["Coordinates", "CPU", "float/double", "[batch_size, 3 x number of atoms]"],
+							["NumAtomsOfType", "CPU", "int", "[batch_size, num atoms types]"],
+							["Offsets", "CPU", "int", "[batch_size, num atoms types]"],
+						]
+						);
+								
+	</script>
+	
+
+	<div class="container" id = "PDB2CoordsUnordered">
+		<script>createHeader("PDB2CoordsUnordered", "class", "FullAtomModel", "PDB2CoordsUnordered" );</script>
+		<div class="container">
+			Reads PDB and outputs coordinates, residue and atom names and number of atoms. The order of atoms is the same as in the PDB file.
+
+			<pre class="pre-scrollable"><code class="python">
+from TorchProteinLibrary import FullAtomModel
+coords, res_names, atom_names, num_atoms = FullAtomModel.PDB2CoordsUnordered(["f4TQ1_B.pdb"])
+			</code></pre>
+			
+			<h3>Input/Output</h3>
+		</div>
+	</div>
+	<script>
+		generate_table("PDB2CoordsUnordered", 
+						[
+							["Filenames", "CPU", "list of strings", "length = batch_size"],
+						],
+						[
+							["Coordinates", "CPU", "double", "[batch_size, 3 x number of atoms]"],
+							["ChainNames", "CPU", "byte", "[batch_size, number of atoms, 1]"],
+							["ResidueNames", "CPU", "byte", "[batch_size, number of atoms, 4]"],
+							["ResidueNumbers", "CPU", "byte", "[batch_size, number of atoms]"],
+							["AtomNames", "CPU", "byte", "[batch_size, number of atoms, 4]"],
+							["NumAtoms", "CPU", "int", "[batch_size]"]
+						]
+						);
+									
+	</script>
+	<div class="container" id="ExamplePDB2CoordsUnordered">
+			<p class="text-light bg-dark"><h3>Example</h3></p>
+				<pre class="pre-scrollable"><code class="python">
+import torch
+from TorchProteinLibrary import FullAtomModel
+import numpy as np
+import matplotlib
+import matplotlib.pylab as plt
+import mpl_toolkits.mplot3d.axes3d as p3
+
+from scipy.spatial import ConvexHull
+cmap = matplotlib.cm.get_cmap('Spectral')
+
+if __name__=='__main__':
+	
+	#Reading pdb file
+	p2c = FullAtomModel.PDB2CoordsUnordered()
+	coords, chains, res_names, res_nums, atom_names, num_atoms = p2c(["f4TQ1_B.pdb"])
+	
+	#Resizing coordinates array for convenience
+	N = int(num_atoms[0].item())
+	coords.resize_(1, N, 3)
+
+	
+	N_res = res_nums[0,-1].item()+1
+	residue_hulls = []
+	residue_coords = []
+	for i in range(N_res):
+		mask = torch.eq(res_nums[0,:], i)
+		num_res_atoms = int(mask.sum().item())
+
+		# Obtaining coordinates of all atoms of a single residue
+		coords_mask = torch.stack([mask, mask, mask], dim = 1).unsqueeze(dim=0)
+		res_coords = coords.masked_select(coords_mask).resize(num_res_atoms, 3).numpy()
+		residue_coords.append(res_coords)
+		
+		# Constructing a convex hull
+		hull = ConvexHull(res_coords)
+		residue_hulls.append(hull)
+	
+	#Plotting all atoms with the red dots
+	cmap = matplotlib.cm.get_cmap('Set3')
+	sx, sy, sz = coords[0,:,0].numpy(), coords[0,:,1].numpy(), coords[0,:,2].numpy()
+	fig = plt.figure()
+	plt.title("PDB2CoordsUnordered")
+	ax = p3.Axes3D(fig)
+	i_res = 0
+	for hull, coords in zip(residue_hulls,residue_coords):
+		for simplex in hull.simplices:
+			ax.plot(coords[simplex, 0], coords[simplex,1], coords[simplex,2], color = cmap(float(i_res)/float(N_res)))
+		i_res += 1
+
+	ax.plot(sx,sy,sz, 'r.', label = 'atoms')
+	ax.legend()
+	plt.show()
+	plt.savefig("ExamplePDB2CoordsUnordered.png")
+	
+				</code></pre>
+			<img src="Examples/FullAtomModel/ExamplePDB2CoordsUnordered.png" class="rounded mx-auto d-block float-center" alt="..." width=60%>
+		</div>
+	
+	
+	<div class="container" id = "CoordsTranslate">
+		<script>createHeader("CoordsTranslate", "class", "FullAtomModel", "CoordsTranslate" );</script>
+		<div class="container">
+			Translates coordinates, namely:
+			$$ \mathbf{r}_i' = \mathbf{r}_i + \mathbf{T}_k $$
+			where $i = 0$ to $N_k - 1$ and $k = 0$ to $batch\_size-1$.
+			($N_k$ is the number of atoms in the $k$-th batch sample.)
+			
+			<pre class="pre-scrollable"><code class="python">
+from TorchProteinLibrary import FullAtomModel				
+translate = FullAtomModel.CoordsTranslate()
+coords = torch.randn(1, 4*3, dtype=torch.double)
+translation = torch.randn(1, 3, dtype=torch.double)
+num_atoms = torch.tensor([4], dtype=torch.int)
+coords_t = translate(coords, translation, num_atoms)
+			</code></pre>
+			
+			<h3>Input/Output</h3>
+		</div>
+	</div>
+	<script>
+		generate_table("CoordsTranslate", 
+						[
+							["Coordinates", "CPU/GPU", "float/double", "[batch_size, 3 x number of atoms]"],
+							["Translation", "CPU/GPU", "float/double", "[batch_size, 3]"],
+							["NumAtoms", "CPU/GPU", "int", "[batch_size]"]
+						],
+						[
+							["Coordinates", "CPU/GPU", "float/double", "[batch_size, 3 x number of atoms]"],
+						]
+						);
+									
+	</script>
+	
+	<div class="container" id = "CoordsRotate">
+		<script>createHeader("CoordsRotate", "class", "FullAtomModel", "CoordsRotate" );</script>
+		<div class="container">
+			Rotates coordinates, namely:
+			$$ \mathbf{r}_i' = R_k \mathbf{r}_i $$
+			where $i = 0$ to $N_k - 1$ and $k = 0$ to $batch\_size-1$.
+			($N_k$ is the number of atoms in the $k$-th batch sample.)
+			
+			<pre class="pre-scrollable"><code class="python">
+from TorchProteinLibrary import FullAtomModel
+rotate = FullAtomModel.CoordsRotate()
+coords = torch.randn(1, 4*3, dtype=torch.double)
+rotation = torch.eye(4, 4, dtype=torch.double).unsqueeze(dim=0)
+num_atoms = torch.tensor([4], dtype=torch.int)
+coords_r = rotate(coords, rotation, num_atoms)
+			</code></pre>
+			
+			<h3>Input/Output</h3>
+		</div>
+	</div>
+	
+	<script>
+		generate_table("CoordsRotate", 
+						[
+							["Coordinates", "CPU/GPU", "float/double", "[batch_size, 3 x number of atoms]"],
+							["Rotation", "CPU/GPU", "float/double", "[batch_size, 3, 3]"],
+							["NumAtoms", "CPU/GPU", "int", "[batch_size]"]
+						],
+						[
+							["Coordinates", "CPU/GPU", "float/double", "[batch_size, 3 x number of atoms]"],
+						]
+						);
+									
+	</script>
+
+<div class="container" id = "Coords2Center">
+	<script>createHeader("Coords2Center", "class", "FullAtomModel", "Coords2Center" );</script>
+	<div class="container">
+		Returns geometrical center of a set of coordinates:
+		$$ \mathbf{r}_i' = \frac{1}{N_k}\sum_i \mathbf{r}_i $$
+		where $i = 0$ to $N_k - 1$ and $k = 0$ to $batch\_size-1$.
+		($N_k$ is the number of atoms in the $k$-th batch sample.)
+		
+		<pre class="pre-scrollable"><code class="python">
+from TorchProteinLibrary import FullAtomModel
+center = FullAtomModel.Coords2Center()
+coords = torch.randn(1, 4*3, dtype=torch.double)
+num_atoms = torch.tensor([4], dtype=torch.int)
+coords_c = center(coords, num_atoms)
+		</code></pre>
+		
+		<h3>Input/Output</h3>
+	</div>
+</div>
+
+<script>
+	generate_table("Coords2Center", 
+					[
+						["Coordinates", "CPU/GPU", "float/double", "[batch_size, 3 x number of atoms]"],
+						["NumAtoms", "CPU/GPU", "int", "[batch_size]"]
+					],
+					[
+						["Center", "CPU/GPU", "float/double", "[batch_size, 3]"],
+					]
+					);
+								
+</script>
+	
+	<div class="container" id ="getBBox">
+		<script>createHeader("getBBox", "function", "FullAtomModel", "getBBox", "(Coordinates, NumAtoms)" );</script>
+		<div class="container">
+			Computes axis-aligned bounding box, non-differentiable. A is the corner with the lowest coordinates and 
+			B is the corner with the highest coordinates.
+			
+			<pre class="pre-scrollable"><code class="python">
+from TorchProteinLibrary import FullAtomModel
+coords = torch.randn(1, 4*3, dtype=torch.double)
+num_atoms = torch.tensor([4], dtype=torch.int)
+A, B = FullAtomModel.getBBox(coords, num_atoms)
+			</code></pre>
+			
+			<h3>Input/Output</h3>
+		</div>
+	</div>
+	<script>
+		generate_table("getBBox", 
+						[
+							["Coordinates", "CPU", "float/double", "[batch_size, 3 x number of atoms]"],
+							["NumAtoms", "CPU", "int", "[batch_size]"]
+						],
+						[
+							["A", "CPU", "float/double", "[batch_size, 3]"],
+							["B", "CPU", "float/double", "[batch_size, 3]"],
+						]
+						);
+									
+	</script>
+	
+	<div class="container" id = "getRandomTranslation">
+		<script>createHeader("getRandomTranslation", "function", "FullAtomModel", "getRandomTranslation", "(A, B, VolumeSize)" );</script>
+		<div class="container">
+			Returns a random translation that keeps the protein bounding box within a cube of a given size.
+			
+			<pre class="pre-scrollable"><code class="python">
+from TorchProteinLibrary import FullAtomModel			
+A = torch.randn(1, 3, dtype=torch.double)
+B = A + torch.abs(torch.randn(1, 3, dtype=torch.double))
+translation = FullAtomModel.getRandomTranslation(A, B, 120)
+			</code></pre>
+			
+			<h3>Input/Output</h3>
+		</div>
+	</div>
+	<script>
+		generate_table("getRandomTranslation", 
+						[
+							["A", "CPU", "float/double", "[batch_size, 3]"],
+							["B", "CPU", "float/double", "[batch_size, 3]"],
+							["VolumeSize", "CPU", "python float", "-"],
+						],
+						[
+							["RandomTranslations", "CPU", "double", "[batch_size, 3]"],
+						]
+						);
+									
+	</script>
+	
+	
+	<div class="container" id = "getRandomRotation">
+		<script>createHeader("getRandomRotation", "function", "FullAtomModel", "getRandomRotation", "(batch_size)" );</script>
+		<div class="container">
+			Returns a random rotation by uniformly sampling the $SO(3)$ group.
+			
+			<pre class="pre-scrollable"><code class="python">
+from TorchProteinLibrary import FullAtomModel		
+R = FullAtomModel.getRandomRotation(1)
+			</code></pre>
+			
+			<h3>Implementation</h3>
+			Specifically, we draw three numbers
+			$u_1, u_2, u_3$ from the uniform distribution on the interval $(0, 1)$, then compute the following
+			quaternion $\mathbf{q}$:
+			$$\begin{eqnarray}
+			q_0 &=& \sqrt{1-u_1} \sin(2\pi u_2) \\
+			q_1 &=& \sqrt{1-u_1} \cos(2\pi u_2) \\
+			q_2 &=& \sqrt{u_1} \sin(2\pi u_3) \\
+			q_3 &=& \sqrt{u_1} \cos(2\pi u_3) \\
+			\end{eqnarray}
+			$$
+			The rotation matrix can then be written as:
+			$$
+			R = \begin{bmatrix}
+			q^2_0 + q^2_1 - q^2_2 - q^2_3 & 2(q_1 q_2 - q_0 q_3) & 2(q_1 q_3 + q_0 q_2) \\
+			2(q_1 q_2 + q_0 q_3) & q^2_0 - q^2_1 + q^2_2 - q^2_3 & 2(q_2 q_3 - q_0 q_1) \\
+			2(q_1 q_3 - q_0 q_2) & 2(q_2 q_3 + q_0 q_1) & q^2_0 - q^2_1 - q^2_2 + q^2_3
+			\end{bmatrix}
+			$$
+			More details on this sampling technique can be found in:
+			<em>Kirk, David. Graphics Gems III (IBM Version). Elsevier, 2012</em>
+			(<a href="https://www.elsevier.com/books/graphics-gems-iii-ibm-version/kirk/978-0-08-050755-2">link</a>).
+			<br><br>
+			
+			<h3>Input/Output</h3>
+		</div>
+	</div>
+	<script>
+		generate_table("getRandomRotation", 
+						[
+							["BatchSize", "CPU", "python int", "-"],
+						],
+						[
+							["RandomRotations", "CPU", "double", "[batch_size, 3, 3]"],
+						]
+						);
+									
+	</script>
+	
+	</main>
+	</div>
+	<footer class="text-muted">
+	<div class="container">
+	<p>This site was created with &copy; Bootstrap.</p>
+	</div>
+	</footer>
+
+	<!-- Optional JavaScript -->
+	<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+</body>
+</html>
